@@ -101,18 +101,18 @@ positive_text = get_text(reviews, '1')
 negative_text = get_text(reviews, '-1')
 
 #Generate Word Counts For Positive Text
-positive_count = count_text(positive_text)
+positive_counts = count_text(positive_text)
 
 #Generate Word Counts For Negative Text
-negative_count = count_text(negative_text)
+negative_counts = count_text(negative_text)
 
 print('-----------------------------------------------')
 print("Positive Text Sample: ",positive_text[:100])
 print("Negative Text Sample: ",negative_text[:100])
 
 print('-----------------------------------------------')
-print("Word Count Of Positive Text: ",len(positive_count))
-print("Word Count Of Positive Text: ",len(negative_count))
+print("Features In Positive Text: ",len(positive_counts))
+print("Features In Negative Text: ",len(negative_counts))
 
 print('-----------------------------------------------')
 ```
@@ -121,7 +121,96 @@ print('-----------------------------------------------')
     Positive Text Sample:  bromwell high is a cartoon comedy. it ran at the same time as some other programs about school life,
     Negative Text Sample:  story of a man who has unnatural feelings for a pig. starts out with a opening scene that is a terri
     -----------------------------------------------
-    Word Count Of Positive Text:  29094
-    Word Count Of Positive Text:  29254
+    Features In Positive Text:  29094
+    Features In Negative Text:  29254
     -----------------------------------------------
+    
+
+
+```python
+def get_y_count(score):
+    return len([r for r in reviews if r[1] == str(score)])
+
+positive_review_count = get_y_count(-1)
+negative_review_count = get_y_count(1)
+
+print('-----------------------------------------------')
+print('Total Number Of Reviews: ',len(reviews))
+print('Total Number Of Positive Reviews: ',positive_review_count)
+print('Total Number Of Negative Reviews: ',positive_review_count)    
+print('-----------------------------------------------')
+
+prob_positive = positive_review_count/len(reviews)
+prob_negative = negative_review_count/len(reviews)
+
+print('Class Probabilty Of Being Positive Text: ',prob_positive)
+print('Class Probabilty Of Being Negative Text: ',prob_negative)
+print('-----------------------------------------------')
+```
+
+    -----------------------------------------------
+    Total Number Of Reviews:  2000
+    Total Number Of Positive Reviews:  1000
+    Total Number Of Negative Reviews:  1000
+    -----------------------------------------------
+    Class Probabilty Of Being Positive Text:  0.5
+    Class Probabilty Of Being Negative Text:  0.5
+    -----------------------------------------------
+    
+
+
+```python
+def make_class_prediction(text, counts, class_prob, class_count):
+    prediction = 1
+    text_counts = Counter(re.split("\s+", text))
+    #print(text_counts)
+    for word in text_counts:
+        prediction *=  float(text_counts.get(word)) * ((counts.get(word, 0) + 1) / (sum(counts.values()) + class_count))
+        #print(prediction)
+    return prediction * class_prob
+
+print("Review: ",reviews[0])
+print("Negative prediction: ",make_class_prediction(reviews[10][0], negative_counts, prob_negative, negative_review_count))
+print("Positive prediction: ",make_class_prediction(reviews[100][0], positive_counts, prob_positive, positive_review_count))
+```
+
+    Review:  ["Story of a man who has unnatural feelings for a pig. Starts out with a opening scene that is a terrific example of absurd comedy. A formal orchestra audience is turned into an insane, violent mob by the crazy chantings of it's singers. Unfortunately it stays absurd the WHOLE time with no general narrative eventually making it just too off putting. Even those from the era should be turned off. The cryptic dialogue would make Shakespeare seem easy to a third grader. On a technical level it's better than you might think with some good cinematography by future great Vilmos Zsigmond. Future stars Sally Kirkland and Frederic Forrest can be seen briefly.", '-1']
+    Negative prediction:  0.0
+    Positive prediction:  0.0
+    
+
+### Predicting The TestSet
+
+
+```python
+def make_decision(text, make_class_prediction):
+    neg_pred = make_class_prediction(text, negative_counts, prob_negative, negative_review_count)
+    pos_pred = make_class_prediction(text, positive_counts, prob_positive, negative_review_count) 
+    
+    if neg_pred > pos_pred :
+        return -1
+    
+    return 1
+
+with open('test.csv', 'r', encoding="utf8") as file:
+    test = list(csv.reader(file))
+    
+predictions = [make_decision(r[0], make_class_prediction) for r in test]     
+```
+
+
+```python
+#Accuracy
+from sklearn.metrics import accuracy_score
+actual_labels = [r[1] for r in test]
+count = 0
+
+for i in range(len(predictions)):
+    if actual_labels[i] == str(predictions[i]):
+        count += 1
+        
+print('Accuracy: ',count/len(actual_labels))
+```
+
+    Accuracy:  0.559
     
