@@ -1,216 +1,204 @@
 
-### 1. Bayes Theorem Intro
+## Moview Review Sentiment Analysis
 
 
 ```python
-days = [["ran", "was tired"], ["ran", "was not tired"], 
-        ["didn't run", "was tired"], ["ran", "was tired"], 
-        ["didn't run", "was not tired"], ["ran", "was not tired"], ["ran", "was tired"]]
-
-#lets say that we want to calculate the odds that someone was tired, given that they ran using naive bayes.
-#This is P(A)
-prob_tired = len([d for d in days if d[1] == 'was tired'])/len(days)
-
-#This is P(B)
-prob_ran = len([d for d in days if d[0] == 'ran'])/len(days)
-
-#This is P(B|A)
-prob_ran_given_tired = len([d for d in days if d[0] == "ran" and d[1] == "was tired"]) / len([d for d in days if d[1] == "was tired"])  
-
-#Now we can calculate P(A|B)
-
-prob_tired_given_ran = (prob_ran_given_tired * prob_tired) / prob_ran
-
-print('The probability of being tired, given that you ran: ',prob_tired_given_ran)
-```
-
-    The probability of being tired, given that you ran:  0.6
-    
-
-### 2.  Naive Bayes
-
-
-```python
-# Here's our data, but with "woke up early" or "didn't wake up early" added.
-days = [["ran", "was tired", "woke up early"], ["ran", "was not tired", "didn't wake up early"], 
-        ["didn't run", "was tired", "woke up early"], ["ran", "was tired", "didn't wake up early"], 
-        ["didn't run", "was tired", "woke up early"], ["ran", "was not tired", "didn't wake up early"], 
-        ["ran", "was tired", "woke up early"]]
-
-# We're trying to predict whether or not the person was tired on this day.
-new_day = ["ran", "didn't wake up early"]
-
-def calc_y_prob(y_label, days):
-    return len([d for d in days if d[1] == y_label])/len(days)
-
-def calc_ran_prob_given_y(ran_label, y_label, days):
-    return len([d for d in days if d[0] == ran_label and d[1] == y_label])/len(days)
-
-def calc_woke_early_prob_given_y(woke_label, y_label, days):
-    return len([d for d in days if d[2] == woke_label and d[1] == y_label])/len(days)
-
-denominator = len([d for d in days if d[0] == new_day[0] and d[2] == new_day[1]])/len(days)
-
-
-#Lets plugin all the values and find out the label for given data point.
-prob_tired = calc_y_prob('was tired', days) * calc_ran_prob_given_y(new_day[0], 'was tired', days) * calc_woke_early_prob_given_y(new_day[1], 'was tired', days) / denominator 
-
-prob_not_tired = calc_y_prob('was not tired', days) * calc_ran_prob_given_y(new_day[0], 'was not tired', days) * calc_woke_early_prob_given_y(new_day[1], 'was not tired', days) / denominator 
-
-
-#Now lets make a classifiaction deceision based on probabilities
-
-print('Tired Probability: ',prob_tired)
-print('Not Tired Probability: ',prob_not_tired)
-
-classifiaction = 'was tired'
-if prob_tired < prob_not_tired:
-    classifiaction = 'was not tired'
-    
-print('Classificaton: ',classifiaction)    
-```
-
-    Tired Probability:  0.10204081632653061
-    Not Tired Probability:  0.054421768707482984
-    Classificaton:  was tired
-    
-
-### 3. Text Learning
-
-
-```python
-from collections import Counter
-import csv
+#Required Imports
+import os
 import re
-
-#Read In The Training Data
-with open('train.csv', 'r',encoding="utf8") as file:
-    reviews = list(csv.reader(file))
-    
-def get_text(reviews, score):
-    return ' '.join([r[0].lower() for r in reviews if r[1] == str(score)])
-    
-def count_text(text):
-    words = re.split('\s+', text)
-    return Counter(words)
-
-    
-#positive reviews:
-positive_text = get_text(reviews, '1')
-#negative reviews:
-negative_text = get_text(reviews, '-1')
-
-#Generate Word Counts For Positive Text
-positive_counts = count_text(positive_text)
-
-#Generate Word Counts For Negative Text
-negative_counts = count_text(negative_text)
-
-print('-----------------------------------------------')
-print("Positive Text Sample: ",positive_text[:100])
-print("Negative Text Sample: ",negative_text[:100])
-
-print('-----------------------------------------------')
-print("Features In Positive Text: ",len(positive_counts))
-print("Features In Negative Text: ",len(negative_counts))
-
-print('-----------------------------------------------')
+import string
+from random import shuffle
+from collections import Counter
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
+from sklearn.model_selection import train_test_split
 ```
 
-    -----------------------------------------------
-    Positive Text Sample:  bromwell high is a cartoon comedy. it ran at the same time as some other programs about school life,
-    Negative Text Sample:  story of a man who has unnatural feelings for a pig. starts out with a opening scene that is a terri
-    -----------------------------------------------
-    Features In Positive Text:  29094
-    Features In Negative Text:  29254
-    -----------------------------------------------
+
+```python
+root = 'Data/'
+folders = os.listdir(root)
+movie_reviews = []
+translator = str.maketrans('','', string.punctuation)
+stemmer = SnowballStemmer("english")
+stop_words = stopwords.words("english")
+
+def parseOutText(all_text):
+    '''
+       Function To Remove Punctuations, Alpha-Numeric Words 
+       And To Stem Those Words. 
+    '''
+    all_text = all_text.translate(translator).replace('\n', ' ')
+    words_lst = all_text.split(' ')
+    complete_sentence = ''
+    for word in words_lst:
+        word = stemmer.stem(word.strip())
+        if word != '' and word.isalpha() and word not in stop_words:
+            complete_sentence += (word + ' ')
+
+    return complete_sentence.strip()
+
+
+# This Code Is To Read Data From Different Folders And Combine Them Into A Single Array
+for folder in folders:
+    path = (root + folder +'/')
+    files = os.listdir(path)
+    for file in files:
+        f = open(path + file)
+        if folder == 'neg':
+            movie_reviews.append([parseOutText(f.read()),-1])
+        elif folder == 'pos':
+            movie_reviews.append([parseOutText(f.read()),1])     
+            
+print('Total Number Data Points In Reviews: ',len(movie_reviews))            
+```
+
+    Total Number Data Points In Reviews:  2000
+    
+
+
+```python
+#Lets Seperate The Data Into Training And Testing Sets.
+shuffle(movie_reviews)
+
+train_data = movie_reviews[:1800]
+test_data = movie_reviews[1800:]
+
+print('Total Number Of Data Points In Training Set: ',len(train_data))
+print('Total Number Of Data Points In Testing Set: ',len(test_data))
+```
+
+    Total Number Of Data Points In Training Set:  1800
+    Total Number Of Data Points In Testing Set:  200
+    
+
+
+```python
+def get_text(reviews, score):
+    '''
+        This function is to collect data for a particular tone
+    '''
+    return "".join([r[0].lower() for r in reviews if r[1] == (score)])
+
+def count_text(text):
+    '''
+        This function is to collect features from a particular tone.
+    '''
+    words = re.split("\s+", text)
+    return Counter(words)
+    
+positive_text = get_text(train_data, 1)
+negative_text = get_text(train_data, -1)
+
+positive_counts = count_text(positive_text)
+negative_counts = count_text(negative_text)
+    
+print('Positive text sample: ', positive_text[:320])
+print('------------------------------------------------------------------------------------------------------------')
+print('Negative text sample: ', negative_text[:320]) 
+```
+
+    Positive text sample:  devil take ask rhetor lull voic spoil titl charact onegin pronounc ohneggin wait death reliev lifetim rapaci behaviour martha fienn debut featur quit liter film poetri base epic russian poem alexand pushkin profound studi regret confus shame guilt first meet eugen onegin ralph act sister anoth brother magnus compos sco
+    ------------------------------------------------------------------------------------------------------------
+    Negative text sample:  yet anoth brainless teen flick one surpris drug sex star kati holm sarah polli couldnt look bore charact cardboard cutout everi clich teenag one thing need know realli hate movi everyth annoy hell act script plot end director fluke hit swinger could veri well direct bunch nonam actor watchab film big star go pretti muc
     
 
 
 ```python
 def get_y_count(score):
-    return len([r for r in reviews if r[1] == str(score)])
+    '''
+        This function is to return the total number of reviews of a particular tone 
+    '''
+    return len([r for r in train_data if r[1] == score])
 
-positive_review_count = get_y_count(-1)
-negative_review_count = get_y_count(1)
+positive_review_count = get_y_count(1)
+negative_review_count = get_y_count(-1)
 
-print('-----------------------------------------------')
-print('Total Number Of Reviews: ',len(reviews))
-print('Total Number Of Positive Reviews: ',positive_review_count)
-print('Total Number Of Negative Reviews: ',positive_review_count)    
-print('-----------------------------------------------')
 
-prob_positive = positive_review_count/len(reviews)
-prob_negative = negative_review_count/len(reviews)
+#Prior probabilities
+prob_positive = positive_review_count/len(train_data)
+prob_negative = negative_review_count/len(train_data)
 
-print('Class Probabilty Of Being Positive Text: ',prob_positive)
-print('Class Probabilty Of Being Negative Text: ',prob_negative)
-print('-----------------------------------------------')
+print('Total Number Of Positive Reviews In Training Set: ',positive_review_count)
+print('Total Number Of Negative Reviews In Training Set: ',negative_review_count)
+print('------------------------------------------------------------------')
+print('Prior Probability Of Being Positive Review: ',prob_positive)
+print('Prior Probability Of Being Negative Review: ',prob_negative)
 ```
 
-    -----------------------------------------------
-    Total Number Of Reviews:  2000
-    Total Number Of Positive Reviews:  1000
-    Total Number Of Negative Reviews:  1000
-    -----------------------------------------------
-    Class Probabilty Of Being Positive Text:  0.5
-    Class Probabilty Of Being Negative Text:  0.5
-    -----------------------------------------------
+    Total Number Of Positive Reviews In Training Set:  905
+    Total Number Of Negative Reviews In Training Set:  895
+    ------------------------------------------------------------------
+    Prior Probability Of Being Positive Review:  0.5027777777777778
+    Prior Probability Of Being Negative Review:  0.49722222222222223
     
 
 
 ```python
 def make_class_prediction(text, counts, class_prob, class_count):
+    
     prediction = 1
     text_counts = Counter(re.split("\s+", text))
-    #print(text_counts)
+    
     for word in text_counts:
-        prediction *=  float(text_counts.get(word)) * ((counts.get(word, 0) + 1) / (sum(counts.values()) + class_count))
-        #print(prediction)
-    return prediction * class_prob
-
-print("Review: ",reviews[0])
-print("Negative prediction: ",make_class_prediction(reviews[10][0], negative_counts, prob_negative, negative_review_count))
-print("Positive prediction: ",make_class_prediction(reviews[100][0], positive_counts, prob_positive, positive_review_count))
+        prediction *= text_counts.get(word) * ((counts.get(word,0)+1) / (sum(counts.values()) + class_count))
+    return class_prob * prediction
+print(train_data[0][0])
+print("\nNegative prediction: {0}".format(make_class_prediction(train_data[0][0], negative_counts, prob_negative, negative_review_count)))
+print("Positive prediction: {0}".format(make_class_prediction(train_data[0][0], positive_counts, prob_positive, positive_review_count)))    
 ```
 
-    Review:  ["Story of a man who has unnatural feelings for a pig. Starts out with a opening scene that is a terrific example of absurd comedy. A formal orchestra audience is turned into an insane, violent mob by the crazy chantings of it's singers. Unfortunately it stays absurd the WHOLE time with no general narrative eventually making it just too off putting. Even those from the era should be turned off. The cryptic dialogue would make Shakespeare seem easy to a third grader. On a technical level it's better than you might think with some good cinematography by future great Vilmos Zsigmond. Future stars Sally Kirkland and Frederic Forrest can be seen briefly.", '-1']
-    Negative prediction:  0.0
-    Positive prediction:  0.0
+    yet anoth brainless teen flick one surpris drug sex star kati holm sarah polli couldnt look bore charact cardboard cutout everi clich teenag one thing need know realli hate movi everyth annoy hell act script plot end director fluke hit swinger could veri well direct bunch nonam actor watchab film big star go pretti much drown project ani origin felt like watch dawson creek episod although film still would stay red despit cast surpris end sooo predict sinc male charact sudden outing closet consid surpris hollywood anymor go dawson creek varsiti blue shes go home watch someth els
     
-
-### Predicting The TestSet
+    Negative prediction: 9.30633075462063e-283
+    Positive prediction: 3.0618995093496967e-291
+    
 
 
 ```python
 def make_decision(text, make_class_prediction):
-    neg_pred = make_class_prediction(text, negative_counts, prob_negative, negative_review_count)
-    pos_pred = make_class_prediction(text, positive_counts, prob_positive, negative_review_count) 
+    negative_prediction = make_class_prediction(text, negative_counts, prob_negative, negative_review_count)
+    positive_prediction = make_class_prediction(text, positive_counts, prob_positive, positive_review_count)    
     
-    if neg_pred > pos_pred :
-        return -1
-    
-    return 1
+    if negative_prediction < positive_prediction:
+        return 1
+    return -1
 
-with open('test.csv', 'r', encoding="utf8") as file:
-    test = list(csv.reader(file))
+def calculate_Accuracy(predictions):
+    actual_labels = [r[1] for r in test_data]
+    count = 0
+
+    for i in range(len(predictions)):
+        if actual_labels[i] == (predictions[i]):
+            count += 1
+        
+    print('Accuracy: ',count/len(actual_labels))
     
-predictions = [make_decision(r[0], make_class_prediction) for r in test]     
+    
+predictions = [make_decision(r[0], make_class_prediction) for r in test_data]
+calculate_Accuracy(predictions)
 ```
+
+    Accuracy:  0.54
+    
 
 
 ```python
-#Accuracy
-from sklearn.metrics import accuracy_score
-actual_labels = [r[1] for r in test]
-count = 0
+#The above performed steps can be reduced into few steps using count vectorizer and multinomial naive bayes.
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer
 
-for i in range(len(predictions)):
-    if actual_labels[i] == str(predictions[i]):
-        count += 1
-        
-print('Accuracy: ',count/len(actual_labels))
+vectorizer = CountVectorizer(stop_words = 'english')
+train_features  = vectorizer.fit_transform([r[0] for r in train_data])
+test_features = vectorizer.transform([r[0] for r in test_data])
+
+classifier = MultinomialNB()
+classifier.fit(train_features, [int(r[1]) for r in train_data])
+
+predictions = classifier.predict(test_features)
+calculate_Accuracy(predictions)
+
 ```
 
-    Accuracy:  0.559
+    Accuracy:  0.86
     
