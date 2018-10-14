@@ -6,12 +6,19 @@
 #Required Imports
 import os
 import csv
-import pandas as pd
 import string
+import pandas as pd
+import numpy as np
 from collections import Counter
+%matplotlib inline
+import matplotlib.pyplot as plt
+import seaborn as sns;sns.set()
+
+#Required Imports For Text Classification
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import make_pipeline
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import confusion_matrix
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.model_selection  import train_test_split 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -95,7 +102,7 @@ len(vectorizer.get_feature_names())
 print(array[0])
 ```
 
-    [ 0.  0.  0. ...,  0.  0.  0.]
+    [0. 0. 0. ... 0. 0. 0.]
     
 
 
@@ -115,8 +122,7 @@ print(vectorizer.inverse_transform(array[0]))
            'set', 'spaniard', 'sponsor', 'srichaphan', 'success', 'tamil',
            'thai', 'thailand', 'tiebreak', 'titl', 'took', 'tour',
            'tournament', 'tsunami', 'unicef', 'unspecifi', 'victim', 'went',
-           'win', 'winner', 'work'], 
-          dtype='<U31')]
+           'win', 'winner', 'work'], dtype='<U31')]
     
 
 
@@ -141,7 +147,7 @@ pred = textClassifier.predict(test_tfidf)
 print('The Accuracy: ',accuracy_score(pred, labels_test))
 ```
 
-    The Accuracy:  0.973033707865
+    The Accuracy:  0.9730337078651685
     
 
 
@@ -154,8 +160,26 @@ pred = model.predict(features_test)
 print('The Accuracy: ',accuracy_score(pred, labels_test))
 ```
 
-    The Accuracy:  0.98202247191
+    The Accuracy:  0.9820224719101124
     
+
+
+```python
+#confusion matrix
+mat = confusion_matrix(pred, np.array(labels_test))
+sns.heatmap(mat, cbar = False, fmt = 'd', annot = True, linewidths=.2)
+```
+
+
+
+
+    <matplotlib.axes._subplots.AxesSubplot at 0x1ec7623f60>
+
+
+
+
+![png](output_10_1.png)
+
 
 
 ```python
